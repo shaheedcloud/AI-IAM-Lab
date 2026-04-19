@@ -194,3 +194,19 @@ system. Learn it once, use it everywhere.
 | 04-client-secret.png | Client secret created (value blurred) |
 | 05-graph-explorer-users.png | First successful Graph API read call |
 | 06-graph-write-group-assignment.png | Successful write call adding user to group |
+
+## Troubleshooting note — Graph Explorer tenant issue
+
+Graph Explorer defaulted to personal Microsoft account 
+context because the Entra tenant was created with a 
+Gmail-based admin account. This caused a display error 
+in Graph Explorer even though the API returned HTTP 200.
+
+Lesson learned: HTTP 200 means the call succeeded. 
+Always check the status code first. UI warnings can 
+be misleading.
+
+Resolution: Moved directly to testing Graph API calls 
+through n8n HTTP Request nodes using app registration 
+credentials — which is the correct production approach 
+anyway. Graph Explorer is only a convenience tool.
