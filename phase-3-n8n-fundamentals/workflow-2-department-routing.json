@@ -1,0 +1,145 @@
+{
+  "name": "Workflow 2 - Department Routing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-hire",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0bcd7e61-1be5-4501-98f4-eefb146cbf06",
+      "name": "Webhook",
+      "webhookId": "5dd948e8-b3b3-4109-a0a5-ffa420974e32"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9a1f1aa0-31b7-40ae-9cc5-fd7aae7d9700",
+              "leftValue": "={{ $json.body.department }}",
+              "rightValue": "HR",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a30ff5ab-57b1-41cb-8692-51fa471ffe78",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "shayahim@gmail.com",
+        "subject": "=HR Onboarding - {{ $json.body.name }}",
+        "message": "=New HR hire received. Name: {{ $json.body.name }} — Email: {{ $json.body.email }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        -96
+      ],
+      "id": "202ca7c1-fea7-4091-80ad-f3aa3d0e9425",
+      "name": "Send a message",
+      "webhookId": "c758921a-24ef-4830-9ab1-120762a1aec7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tEQDEDLVdIWmI8o8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "shayahim@gmail.com",
+        "subject": "=Non-HR Onboarding — {{ $json.body.name }}",
+        "message": "=New hire received outside HR. Department: {{ $json.body.department }} — Email: {{ $json.body.email }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        96
+      ],
+      "id": "1ba7d525-5abf-4e49-9c79-0b3e1a8153e7",
+      "name": "Send a message1",
+      "webhookId": "abf3c225-dffe-480b-afee-a2d4eb9278c4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tEQDEDLVdIWmI8o8",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "35432041-e046-475f-ac4d-bff3e3d96815",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "05cf484c8ea4021e2c4afb1552b00d4ce94f5080b59b6ea4d26e579f08945dfe"
+  },
+  "id": "zL5GVvwYHFTdOXbn",
+  "tags": []
+}

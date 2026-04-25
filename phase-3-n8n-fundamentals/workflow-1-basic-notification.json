@@ -1,0 +1,111 @@
+{
+  "name": "Workflow 1 - Basic Notification",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8f26d344-a353-4755-9b57-c7449f3359df",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c062d3b0-3965-479d-82cf-e1f8bec649bd",
+              "name": "name",
+              "value": "Test User",
+              "type": "string"
+            },
+            {
+              "id": "58e7fd04-1ebc-4f56-a18c-3cba223df357",
+              "name": "email",
+              "value": "testuser@example.com",
+              "type": "string"
+            },
+            {
+              "id": "ea7f61ce-dfa5-4301-b155-c8ab24877e84",
+              "name": "department",
+              "value": "IT",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "f30bf6d5-a470-4e4d-a596-ed8fe97bd172",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "sendTo": "hayatuddinshaheed@gmail.com",
+        "subject": "=n8n test - {{ $json.name }}",
+        "message": "=New user detected. Department: {{ $json.department }} - Email: {{ $json.email }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "a56378de-f7ce-4ee9-a97e-4ec2242c05b4",
+      "name": "Send a message",
+      "webhookId": "385c3dcb-14d7-483c-9f8e-97399ffbd666",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "tEQDEDLVdIWmI8o8",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "15e6dcbc-22d1-45f8-9920-6623474b6e6a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "05cf484c8ea4021e2c4afb1552b00d4ce94f5080b59b6ea4d26e579f08945dfe"
+  },
+  "id": "yVcKsxRstEHu5fus",
+  "tags": []
+}
