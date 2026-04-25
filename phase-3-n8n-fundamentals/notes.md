@@ -62,123 +62,206 @@ from the previous node via expressions like
 
 Connecting Gmail to n8n on a self-hosted local instance 
 is not a one-click process. It requires creating a 
-Google Cloud OAuth credential manually. Here is exactly 
-what was done:
+Google Cloud OAuth credential manually.
 
 **Step 1 — Created a Google Cloud project**
 - Went to console.cloud.google.com
-- Created a new project named `n8n-iam-lab`
+- Created a new project named n8n-iam-lab
 
 **Step 2 — Enabled the Gmail API**
-- Searched for Gmail API in the library
+- Searched for Gmail API in the Google Cloud Library
 - Clicked Enable
+- Important: this is a separate step from OAuth setup.
+  Both must be done or the Gmail node will fail.
 
 **Step 3 — Configured OAuth consent screen**
 - Went to Google Auth Platform → Get started
-- Set app name to `n8n-iam-lab`
+- Set app name to n8n-iam-lab
 - Set audience to External
 - Added shayahim@gmail.com as a test user
 - This step is required before creating OAuth credentials
+- Without adding your account as a test user, Google 
+  returns Error 403: access_denied
 
 **Step 4 — Created OAuth Client ID**
 - Went to Clients → Create client
 - Application type: Web application
 - Name: n8n-gmail
-- Added authorized redirect URI exactly:
-  `http://localhost:5678/rest/oauth2-credential/callback`
-- Copied Client ID and Client Secret
+- Added authorized redirect URI:
+  http://localhost:5678/rest/oauth2-credential/callback
+- Copied Client ID and Client Secret into n8n
 
 **Step 5 — Connected in n8n**
-- Pasted Client ID and Client Secret into n8n 
-Gmail credential fields
+- Pasted Client ID and Client Secret into Gmail 
+  credential fields in n8n
 - Clicked Sign in with Google
-- First attempt failed with Error 403: access_denied 
-because the Gmail account was not added as a test user
-- Fixed by adding the account in Google Auth Platform 
-→ Audience → Test users
-- Second attempt succeeded — "Account connected" confirmed
+- First attempt: Error 403 access_denied — fixed by 
+  adding Gmail account as test user in Google Auth 
+  Platform → Audience → Test users
+- Second attempt: succeeded — Account connected confirmed
 
-**Step 6 — Enabled Gmail API**
-- First workflow execution failed with "Forbidden" error
-- Error message showed Gmail API was not enabled
-- Went to Google Cloud Console → Library → Gmail API 
-→ Enable
-- Re-ran the workflow — succeeded
+**Step 6 — First execution failed**
+- Error: Forbidden — Gmail API not enabled
+- Fix: went to Google Cloud Library → searched Gmail 
+  API → clicked Enable
+- Waited 30 seconds then re-ran — succeeded
 
-### What the workflow produced
-- Subject: `n8n test - Test User`
-- Body: `New user detected. Department: IT - 
-Email: testuser@example.com`
+### What the completed workflow produced
+- Subject: n8n test - Test User
+- Body: New user detected. Department: IT - 
+  Email: testuser@example.com
 - Email arrived in inbox within seconds of execution
 
----
+### Break tests performed on Workflow 1
 
-## Break tests performed
-
-### Break test 1 — Lowercase department value
-Changed department field value from `IT` to `it`.
-Ran the workflow.
-
+**Break test 1 — Lowercase department value**
+Changed department field from IT to it (lowercase).
 Result: Email sent successfully but body showed 
-"Department: it" — lowercase passed through silently 
-with no warning or error.
+"Department: it" with no warning or error.
+Lesson: n8n passes values through exactly as they are.
+Case sensitivity is invisible. An IF node checking for 
+"IT" would silently route "it" to the wrong path.
+See: 07-break-test-lowercase.png
 
-Why this matters: When IF node branching checks for 
-"IT" and receives "it" — it will route to the wrong 
-path. Case sensitivity is invisible and dangerous.
-
-See screenshot: `07-break-test-lowercase.png`
-
-### Break test 2 — Changed name value
-Changed name field from `Test User` to `Test Usher`.
-Ran the workflow.
-
-Result: Subject line showed "n8n test - Test Usher" — 
-the expression pulled exactly what was in the field 
-with no validation.
-
-Why this matters: n8n does not validate your data. 
-Whatever enters a field is exactly what flows through. 
-Garbage in means garbage out. Input validation must 
-be built deliberately.
-
-See screenshot: `08-break-test-name-TestUsher.png`
+**Break test 2 — Wrong name value**
+Changed name field from Test User to Test Usher.
+Result: Subject showed "n8n test - Test Usher" — 
+expression pulled the wrong value with no validation.
+Lesson: Garbage in means garbage out. n8n does not 
+validate your data. Input validation must be built 
+deliberately into every workflow.
+See: 08-break-test-name-TestUsher.png
 
 ---
 
-## What broke and how it was fixed
+## Workflow 2 — Webhook → IF → Department Routing
+
+### Purpose
+Learn how real intake works using a webhook trigger.
+Understand branching logic. Route different inputs 
+to different automated actions based on a field value.
+
+### What was built
+- Webhook node — receives POST requests at a URL.
+  Replaces the manual trigger with real external intake.
+  Path set to new-hire. Method set to POST.
+  Test URL: http://localhost:5678/webhook-test/new-hire
+- IF node — evaluates the department field from the 
+  incoming webhook body. Condition: department equals HR.
+  Creates two paths: true (HR) and false (all others).
+- Gmail node on true path — fires HR onboarding email
+- Gmail node on false path — fires non-HR notification
+
+### Key difference from Workflow 1
+
+In Workflow 1, data came from an Edit Fields node.
+Field references used: `{{ $json.name }}`
+
+In Workflow 2, data comes from a webhook POST body.
+Field references must use: `{{ $json.body.name }}`
+
+The data is nested inside a body object when it arrives 
+via webhook. Using `$json.name` instead of 
+`$json.body.name` would silently return empty values.
+
+### Critical discovery — expression mode in Gmail node
+
+When filling in the Subject field of the Gmail node,
+typing `{{ $json.body.name }}` in field mode treats 
+it as plain text and does not resolve it.
+
+The field must be switched to expression mode first
+by clicking the expression toggle (fx icon) before 
+typing the expression. Once in expression mode the 
+preview below the field shows the resolved value.
+
+This was discovered when the first test email arrived 
+with the literal text `{{ $json.body.name }}` in the 
+subject instead of the actual name. Switched to 
+expression mode and re-tested — resolved correctly.
+
+### Testing with Hoppscotch
+
+Used hoppscotch.io (free browser-based API tool) to 
+send POST requests to the webhook URL.
+
+**HR test — true path:**
+```json
+{
+  "name": "Sarah Mitchell",
+  "email": "sarah.mitchell@company.com",
+  "department": "HR"
+}
+```
+Result: Email received — Subject: HR Onboarding - 
+Sarah Mitchell. True path fired. False path did not run.
+See: 14-workflow2-hr-execution.png and 
+15-hr-email-received.png
+
+**IT test — false path:**
+```json
+{
+  "name": "David Chen",
+  "email": "david.chen@company.com",
+  "department": "IT"
+}
+```
+Result: Email received — Subject: Non-HR Onboarding — 
+David Chen. False path fired. True path did not run.
+See: 14-workflow2-it-execution.png and 
+15-it-email-received.png
+
+---
+
+## Complete troubleshooting log
 
 | Problem | Cause | Fix |
 |---|---|---|
-| Gmail credential Error 403 | Gmail account not added as test user in Google Cloud | Added account in Google Auth Platform → Audience → Test users |
-| Gmail node Forbidden error | Gmail API not enabled in Google Cloud project | Enabled Gmail API in Google Cloud Console Library |
-| Client ID popup closed before copying | Navigated away too quickly | Retrieved Client ID from Clients page. Reset secret to get new Client Secret value |
-| Graph Explorer showing wrong tenant | Signed in with personal Microsoft account not Entra org account | Documented as known limitation. Moved to n8n HTTP calls instead |
+| Gmail Error 403 access_denied | Gmail account not added as test user | Added account in Google Auth Platform → Audience → Test users |
+| Gmail node Forbidden error | Gmail API not enabled in Google Cloud | Enabled Gmail API in Google Cloud Console Library |
+| Client secret popup closed early | Navigated away before copying | Retrieved Client ID from Clients page. Reset secret to get new value. |
+| Expression not resolving in subject | Subject field was in field mode not expression mode | Clicked fx toggle to switch to expression mode before typing expression |
+| IF node typo — dpartment | Missed the letter e when typing department | Caught before testing. Fixed expression to $json.body.department |
+| Graph Explorer showing wrong tenant | Signed in with personal Microsoft account | Known limitation. Documented and moved to n8n HTTP calls instead |
 
 ---
 
 ## What I learned
 
 - Every node has input and output. Inspect both every 
-time before moving to the next node.
+  time before moving to the next node.
 - Field names and values are exact. A typo or wrong 
-case silently breaks things downstream.
-- Self-hosted n8n requires manual OAuth setup for 
-Google services. This is a one-time process per 
-credential type.
-- The Google Cloud Console requires Gmail API to be 
-explicitly enabled even after OAuth credentials are 
-created. Two separate steps.
+  case silently breaks downstream routing.
+- Webhook data arrives nested inside a body object. 
+  Always use $json.body.fieldname not $json.fieldname 
+  when the trigger is a webhook.
+- Gmail fields must be in expression mode to resolve 
+  dynamic expressions. Field mode treats them as text.
+- Self-hosted n8n requires manual Google Cloud OAuth 
+  setup. This involves two completely separate steps: 
+  creating OAuth credentials AND enabling the Gmail API.
+- The Google Cloud consent screen requires your own 
+  account to be added as a test user when the app is 
+  in testing mode.
 - Credentials are stored once in n8n and reused across 
-all workflows. They are never hardcoded in the workflow.
-- The trigger determines everything — manual for 
-testing, webhook for real intake, schedule for 
-time-based runs.
-- HTTP 200 means the call succeeded. Always check the 
-status code first before reading UI warnings.
-- Break tests reveal assumptions. Running the workflow 
-with wrong data shows exactly where validation is 
-missing before it causes problems in production.
+  all workflows. Never hardcoded in the workflow itself.
+- IF node branching is binary — one condition, two 
+  paths. Only the matching path executes. The other 
+  path stays grey in the execution view.
+- Break tests reveal assumptions before they become 
+  production problems.
+
+---
+
+## Workflow files
+
+| File | What it contains |
+|---|---|
+| workflow-1-basic-notification.json | Manual trigger to Edit Fields to Gmail |
+| workflow-2-department-routing.json | Webhook to IF branching to two Gmail paths |
+
+Import either file into any n8n instance to see the 
+workflow structure directly.
 
 ---
 
@@ -186,12 +269,19 @@ missing before it causes problems in production.
 
 | File | What it shows |
 |---|---|
-| 00-n8n-ready.png | n8n running at localhost:5678 ready for first workflow |
-| 01-manual-trigger-added.png | Empty canvas with Manual Trigger node added |
-| 02-set-node-output.png | Edit Fields node showing three fields in OUTPUT panel |
-| 03-gmail-credential-connected.png | Gmail OAuth credential showing Account connected |
-| 04-gmail-node-config.png | Gmail node configured with To, Subject and Message expressions |
-| 05-gmail-send-success.png | Gmail node OUTPUT showing message ID and SENT label |
-| 06-email-received.png | Actual email received in inbox with correct field values |
-| 07-break-test-lowercase.png | Email body showing lowercase department value passed through |
-| 08-break-test-name-TestUsher.png | Subject showing wrong name value passed through unchanged |
+| 00-n8n-ready.png | n8n running at localhost:5678 |
+| 01-manual-trigger-added.png | Empty canvas with Manual Trigger node |
+| 02-set-node-output.png | Edit Fields output showing three fields |
+| 03-gmail-credential-connected.png | Gmail OAuth showing Account connected |
+| 04-gmail-node-config.png | Gmail node with expressions configured |
+| 05-gmail-send-success.png | Gmail OUTPUT showing SENT confirmation |
+| 06-email-received.png | Test email in inbox with correct field values |
+| 07-break-test-lowercase.png | Lowercase department passed through silently |
+| 08-break-test-name-TestUsher.png | Wrong name value in subject line |
+| 09-webhook-node-config.png | Webhook node configured POST new-hire path |
+| 10-if-node-config.png | IF condition checking department equals HR |
+| 11-gmail-true-path-hr.png | HR Gmail node on true path configured |
+| 12-gmail-false-path-other.png | Non-HR Gmail node on false path configured |
+| 13-workflow2-full-canvas.png | Full canvas showing all four nodes connected |
+| 14-workflow2-it-execution.png | Canvas showing false path execution green |
+| 15-it-email-received.png | Non-HR email received with correct values |
