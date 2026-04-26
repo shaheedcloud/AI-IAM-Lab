@@ -25,14 +25,13 @@ decisions
 
 ## Stack
 
-| Tool | Purpose |
+| Tool | Role |
 |---|---|
 | Microsoft Entra ID | Identity source of truth |
 | Microsoft Graph API | Programmatic control of Entra |
-| n8n (self-hosted) | Workflow automation engine |
-| OpenAI API | AI-assisted decision making |
-| Google Sheets | Audit logging |
-| Gmail | Alerts and notifications |
+| n8n self-hosted | Workflow automation engine |
+| Google Cloud OAuth | Gmail credential for n8n |
+| Gmail | Automated notifications |
 
 ---
 
@@ -91,7 +90,14 @@ is not optional.
 
 ## Project status
 
-In progress — building phase by phase.
+Complete.
+
+This project established the foundational skills for 
+IAM management, programmatic identity control through 
+Microsoft Graph API, and workflow automation using n8n.
+
+It serves as the identity and automation foundation 
+that more advanced projects will build on.
 
 ---
 
